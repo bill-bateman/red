@@ -28,6 +28,7 @@ impl Editor {
     fn refresh_screen(&self) -> Result<(), Error> {
         queue!(stdout(), cursor::Hide)?;
         self.draw_tildes()?;
+        self.draw_version()?;
         queue!(stdout(), cursor::Show)?;
         stdout().flush()?;
         Ok(())
@@ -44,6 +45,17 @@ impl Editor {
         for row in 0..=height {
             queue!(stdout(), cursor::MoveTo(0, row), style::Print("~"))?;
         }
+        Ok(())
+    }
+
+    fn draw_version(&self) -> Result<(), Error> {
+        let (width, height) = terminal::size()?;
+
+        let version = "red v0.1";
+        let x = if version.len() as u16 > width { 0 } else { width / 2 - version.len() as u16 / 2};
+        let y = height / 2;
+
+        queue!(stdout(), cursor::MoveTo(x, y), style::Print(version))?;
         Ok(())
     }
 
