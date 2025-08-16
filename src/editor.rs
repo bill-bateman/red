@@ -1,14 +1,18 @@
 use std::io::{Error, stdout, Write};
 
-use crossterm::event::{read, Event::Key, KeyCode::Char, KeyModifiers};
+use crossterm::event::KeyEventKind;
+use crossterm::event::{read, Event::Key, KeyCode::Char, KeyModifiers, KeyCode};
 use crossterm::{queue, cursor, terminal, style};
 use crossterm::terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType};
 
-pub struct Editor { }
+pub struct Editor {
+    cx: u16,
+    cy: u16,
+}
 
 impl Editor {
     pub fn default() -> Self {
-        Editor{}
+        Editor{cx:0, cy:0}
     }
 
     fn setup(&self) -> Result<(), Error> {
@@ -19,8 +23,8 @@ impl Editor {
 
     fn teardown(&self) -> Result<(), Error> {
         self.clear_screen()?;
+        queue!(stdout(), cursor::MoveTo(0, 0), style::Print("Goodbye.\n\r"))?;
         stdout().flush()?;
-        print!("Goodbye.\n\r");
         disable_raw_mode()?;
         Ok(())
     }
@@ -29,7 +33,7 @@ impl Editor {
         queue!(stdout(), cursor::Hide)?;
         self.draw_tildes()?;
         self.draw_version()?;
-        queue!(stdout(), cursor::Show)?;
+        queue!(stdout(), cursor::Show, cursor::MoveTo(self.cx, self.cy))?;
         stdout().flush()?;
         Ok(())
     }
@@ -59,19 +63,30 @@ impl Editor {
         Ok(())
     }
 
-    fn run(&self) -> Result<(), Error> {
+    fn run(&mut self) -> Result<(), Error> {
         loop {
+            let (width, height) = terminal::size()?;
             self.refresh_screen()?;
-            if let Key(event) = read()? {
+            if let Key(event) = read()? && event.kind == KeyEventKind::Press {
+                // check for press events for Windows
+
                 if event.code == Char('q') && event.modifiers == KeyModifiers::CONTROL {
                     break;
                 }
+                else if event.code == KeyCode::Up && self.cy > 0 { self.cy -= 1; }
+                else if event.code == KeyCode::Down && self.cy < height-1 { self.cy += 1; }
+                else if event.code == KeyCode::Left && self.cx > 0 { self.cx -= 1; }
+                else if event.code == KeyCode::Right && self.cx < width-1 { self.cx += 1; }
+                else if event.code == KeyCode::PageUp { self.cy = 0; }
+                else if event.code == KeyCode::PageDown { self.cy = height-1; }
+                else if event.code == KeyCode::Home { self.cx = 0; }
+                else if event.code == KeyCode::End { self.cx = width-1; }
             }
         }
         Ok(())
     }
 
-    pub fn start(&self) -> Result<(), Error> {
+    pub fn start(&mut self) -> Result<(), Error> {
         self.setup()?;
         let res = self.run();
         self.teardown()?;
