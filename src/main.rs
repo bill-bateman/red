@@ -1,4 +1,5 @@
 mod editor;
+mod view;
 
 use editor::Editor;
 
