@@ -3,13 +3,15 @@ use std::io::{Error, stdout};
 use crossterm::{queue, cursor, terminal, style};
 use crossterm::terminal::{Clear, ClearType};
 
-pub struct View {
+use crate::buffer::Buffer;
 
+pub struct View {
+    buf: Buffer,
 }
 
 impl View {
     pub fn default() -> Self {
-        View{}
+        View{ buf: Buffer::default() }
     }
 
     fn draw_version(&self) -> Result<(), Error> {
@@ -34,7 +36,10 @@ impl View {
     }
 
     fn draw_text(&self) -> Result<(), Error> {
-        queue!(stdout(), cursor::MoveTo(0, 0), style::Print("Hello, world!"))
+        for (index, row) in self.buf.text.iter().enumerate() {
+            queue!(stdout(), cursor::MoveTo(0, index as u16), style::Print(row))?;
+        }
+        Ok(())
     }
 
     pub fn render(&self) -> Result<(), Error> {

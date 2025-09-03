@@ -1,5 +1,6 @@
 mod editor;
 mod view;
+mod buffer;
 
 use editor::Editor;
 
