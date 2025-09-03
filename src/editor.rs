@@ -14,8 +14,8 @@ pub struct Editor {
 }
 
 impl Editor {
-    pub fn default() -> Self {
-        Editor{cx:0, cy:0, view:View::default()}
+    pub fn new(filename: Option<&String>) -> Self {
+        Editor{cx: 0, cy: 0, view: View::new(filename)}
     }
 
     fn setup(&self) -> Result<(), Error> {

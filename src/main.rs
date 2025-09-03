@@ -5,6 +5,9 @@ mod buffer;
 use editor::Editor;
 
 fn main() {
-    let mut editor = Editor::default();
+    let args: Vec<String> = std::env::args().collect();
+    let filename = args.get(1);
+
+    let mut editor = Editor::new(filename);
     editor.start().unwrap();
 }

@@ -10,8 +10,12 @@ pub struct View {
 }
 
 impl View {
-    pub fn default() -> Self {
-        View{ buf: Buffer::default() }
+    pub fn new(filename: Option<&String>) -> Self {
+        let buf = match filename {
+            Some(s) => Buffer::from_file(s).unwrap(), // TODO: handle error better
+            None => Buffer::default(),
+        };
+        View{ buf }
     }
 
     fn draw_version(&self) -> Result<(), Error> {
@@ -36,6 +40,11 @@ impl View {
     }
 
     fn draw_text(&self) -> Result<(), Error> {
+        if self.buf.is_empty() {
+            self.draw_version()?;
+            return Ok(());
+        }
+
         for (index, row) in self.buf.text.iter().enumerate() {
             queue!(stdout(), cursor::MoveTo(0, index as u16), style::Print(row))?;
         }
@@ -45,7 +54,6 @@ impl View {
     pub fn render(&self) -> Result<(), Error> {
         queue!(stdout(), cursor::Hide)?;
         self.draw_tildes()?;
-        self.draw_version()?;
         self.draw_text()?;
         Ok(())
     }
