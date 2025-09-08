@@ -1,9 +1,10 @@
 use std::io::{Error, stdout, Write};
+use std::ops::Drop;
 
 use crossterm::event::KeyEventKind;
 use crossterm::event::{read, Event::Key, Event::Resize, KeyCode::Char, KeyModifiers, KeyCode};
-use crossterm::{queue, cursor, terminal, style};
-use crossterm::terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType};
+use crossterm::{queue, cursor, terminal};
+use crossterm::terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen};
 
 use crate::view::View;
 
@@ -14,29 +15,37 @@ pub struct Editor {
 }
 
 impl Editor {
-    pub fn new(filename: Option<&String>) -> Self {
-        Editor{cx: 0, cy: 0, view: View::new(filename)}
+    pub fn new(filename: Option<&String>) -> Result<Self, Error> {
+        let current_hook = std::panic::take_hook();
+        std::panic::set_hook(Box::new(move |panic_info| {
+            let _ = Editor::teardown();
+            current_hook(panic_info);
+        }));
+        Editor::setup()?;
+
+        Ok(Editor{cx: 0, cy: 0, view: View::new(filename)?})
     }
 
-    fn setup(&self) -> Result<(), Error> {
+    fn setup() -> Result<(), Error> {
+        queue!(stdout(), EnterAlternateScreen)?;
         enable_raw_mode()?;
-        self.clear_screen()?;
+        Editor::clear_screen()?;
         Ok(())
     }
 
-    fn teardown(&self) -> Result<(), Error> {
-        self.clear_screen()?;
-        queue!(stdout(), cursor::MoveTo(0, 0), style::Print("Goodbye.\n\r"))?;
+    fn teardown() -> Result<(), Error> {
+        Editor::clear_screen()?;
+        queue!(stdout(), LeaveAlternateScreen)?;
         stdout().flush()?;
         disable_raw_mode()?;
         Ok(())
     }
 
-    fn clear_screen(&self) -> Result<(), Error> {
+    fn clear_screen() -> Result<(), Error> {
         queue!(stdout(), Clear(ClearType::All))
     }
 
-    fn run(&mut self) -> Result<(), Error> {
+    pub fn run(&mut self) -> Result<(), Error> {
         loop {
             let (width, height) = terminal::size()?;
             
@@ -70,10 +79,10 @@ impl Editor {
         Ok(())
     }
 
-    pub fn start(&mut self) -> Result<(), Error> {
-        self.setup()?;
-        let res = self.run();
-        self.teardown()?;
-        res
+}
+
+impl Drop for Editor {
+    fn drop(&mut self) {
+        Editor::teardown().unwrap();
     }
 }

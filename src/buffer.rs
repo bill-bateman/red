@@ -9,7 +9,7 @@ impl Buffer {
         Buffer{ text: vec![] }
     }
 
-    pub fn from_file(filename: &str) -> Result<Self, Error> {
+    pub fn new(filename: &str) -> Result<Self, Error> {
         let file_contents = std::fs::read_to_string(filename)?;
         let text = file_contents.lines().map(|s| s.to_string()).collect::<Vec<_>>();
         Ok(Buffer{ text })

@@ -11,12 +11,12 @@ pub struct View {
 }
 
 impl View {
-    pub fn new(filename: Option<&String>) -> Self {
+    pub fn new(filename: Option<&String>) -> Result<Self, Error> {
         let buf = match filename {
-            Some(s) => Buffer::from_file(s).unwrap(), // TODO: handle error better
+            Some(s) => Buffer::new(s)?,
             None => Buffer::default(),
         };
-        View{ buf, redraw: true }
+        Ok( View{ buf, redraw: true } )
     }
 
     fn draw_version(&self) -> Result<(), Error> {
@@ -46,10 +46,9 @@ impl View {
             return Ok(());
         }
 
-        let (width, height) = terminal::size()?;
+        let (width, _height) = terminal::size()?;
         for (index, row) in self.buf.text.iter().enumerate() {
             queue!(stdout(), cursor::MoveTo(0, index as u16), style::Print(row.get(..width as usize).unwrap()))?;
-            queue!(stdout(), cursor::MoveTo(0, index as u16), style::Print(width), style::Print(height))?;
         }
         Ok(())
     }

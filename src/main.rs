@@ -8,6 +8,6 @@ fn main() {
     let args: Vec<String> = std::env::args().collect();
     let filename = args.get(1);
 
-    let mut editor = Editor::new(filename);
-    editor.start().unwrap();
+    let mut editor = Editor::new(filename).unwrap();
+    editor.run().unwrap();
 }
