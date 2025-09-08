@@ -7,6 +7,7 @@ use crate::buffer::Buffer;
 
 pub struct View {
     buf: Buffer,
+    redraw: bool,
 }
 
 impl View {
@@ -15,7 +16,7 @@ impl View {
             Some(s) => Buffer::from_file(s).unwrap(), // TODO: handle error better
             None => Buffer::default(),
         };
-        View{ buf }
+        View{ buf, redraw: true }
     }
 
     fn draw_version(&self) -> Result<(), Error> {
@@ -45,16 +46,23 @@ impl View {
             return Ok(());
         }
 
+        let (width, height) = terminal::size()?;
         for (index, row) in self.buf.text.iter().enumerate() {
-            queue!(stdout(), cursor::MoveTo(0, index as u16), style::Print(row))?;
+            queue!(stdout(), cursor::MoveTo(0, index as u16), style::Print(row.get(..width as usize).unwrap()))?;
+            queue!(stdout(), cursor::MoveTo(0, index as u16), style::Print(width), style::Print(height))?;
         }
         Ok(())
     }
 
-    pub fn render(&self) -> Result<(), Error> {
+    pub fn render(&mut self) -> Result<(), Error> {
+        if !self.redraw { return Ok(()); }
+        self.redraw = false;
+
         queue!(stdout(), cursor::Hide)?;
         self.draw_tildes()?;
         self.draw_text()?;
         Ok(())
     }
+
+    pub fn force_redraw(&mut self) { self.redraw = true; }
 }
