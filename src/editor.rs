@@ -3,14 +3,12 @@ use std::ops::Drop;
 
 use crossterm::event::KeyEventKind;
 use crossterm::event::{read, Event::Key, Event::Resize, KeyCode::Char, KeyModifiers, KeyCode};
-use crossterm::{queue, cursor, terminal};
+use crossterm::queue;
 use crossterm::terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen};
 
 use crate::view::View;
 
 pub struct Editor {
-    cx: u16,
-    cy: u16,
     view: View,
 }
 
@@ -23,7 +21,7 @@ impl Editor {
         }));
         Editor::setup()?;
 
-        Ok(Editor{cx: 0, cy: 0, view: View::new(filename)?})
+        Ok(Editor{view: View::new(filename)?})
     }
 
     fn setup() -> Result<(), Error> {
@@ -47,12 +45,7 @@ impl Editor {
 
     pub fn run(&mut self) -> Result<(), Error> {
         loop {
-            let (width, height) = terminal::size()?;
-            
             self.view.render()?;
-            // reset cursor and flush output
-            queue!(stdout(), cursor::Show, cursor::MoveTo(self.cx, self.cy))?;
-            stdout().flush()?;
 
             match read()? {
                 Key(event) => {
@@ -60,17 +53,18 @@ impl Editor {
                         if event.code == Char('q') && event.modifiers == KeyModifiers::CONTROL {
                             break;
                         }
-                        else if event.code == KeyCode::Up && self.cy > 0 { self.cy -= 1; }
-                        else if event.code == KeyCode::Down && self.cy < height-1 { self.cy += 1; }
-                        else if event.code == KeyCode::Left && self.cx > 0 { self.cx -= 1; }
-                        else if event.code == KeyCode::Right && self.cx < width-1 { self.cx += 1; }
-                        else if event.code == KeyCode::PageUp { self.cy = 0; }
-                        else if event.code == KeyCode::PageDown { self.cy = height-1; }
-                        else if event.code == KeyCode::Home { self.cx = 0; }
-                        else if event.code == KeyCode::End { self.cx = width-1; }
+                        else if event.code == KeyCode::Up { self.view.cursor_up()? }
+                        else if event.code == KeyCode::Down { self.view.cursor_down()? }
+                        else if event.code == KeyCode::Left { self.view.cursor_left()? }
+                        else if event.code == KeyCode::Right { self.view.cursor_right()? }
+                        else if event.code == KeyCode::PageUp { self.view.cursor_page_up()? }
+                        else if event.code == KeyCode::PageDown { self.view.cursor_page_down()? }
+                        else if event.code == KeyCode::Home { self.view.cursor_home()? }
+                        else if event.code == KeyCode::End { self.view.cursor_end()? }
                     }
                 },
-                Resize(_, _) => {
+                Resize(width, height) => {
+                    self.view.handle_resize(width, height);
                     self.view.force_redraw();
                 },
                 _ => {}
